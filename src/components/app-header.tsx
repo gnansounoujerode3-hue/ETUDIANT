@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, TrendingUp, CreditCard, LogOut } from "lucide-react";
+import { LayoutDashboard, TrendingUp, CreditCard, LogOut, Settings } from "lucide-react";
 import { Logo } from "./logo";
 import { LanguageSwitcher } from "./language-switcher";
 import { Badge, Button } from "./ui";
@@ -46,6 +46,13 @@ export function AppHeader({ name, plan }: { name: string | null; plan: "free" | 
         </nav>
         <div className="flex items-center gap-2">
           <LanguageSwitcher className="hidden xs:inline-flex sm:inline-flex" />
+          <Link
+            href="/settings"
+            title="Paramètres"
+            className="rounded-full border border-white/10 bg-white/[0.04] p-2.5 text-zinc-400 transition-colors hover:border-violet/40 hover:text-white"
+          >
+            <Settings className="size-4" />
+          </Link>
           {plan === "premium" ? (
             <Badge variant="cyan">{d.common.premium}</Badge>
           ) : (
