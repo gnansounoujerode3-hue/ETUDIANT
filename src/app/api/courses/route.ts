@@ -5,6 +5,7 @@ import { chapters, courses, flashcards, questions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { structureCourse } from "@/lib/ai";
 import { canCreateCourse } from "@/lib/limits";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -25,6 +26,18 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const rate = await enforceRateLimit(
+    req,
+    { name: "course-create", limit: user.plan === "premium" ? 30 : 3, windowSeconds: 24 * 60 * 60 },
+    user.id
+  );
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+    );
+  }
 
   let body: { title?: string; sourceName?: string; text?: string } = {};
   try {

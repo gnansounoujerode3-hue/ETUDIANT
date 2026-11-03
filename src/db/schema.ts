@@ -12,6 +12,19 @@ import {
 import { sql } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
+// Limitation de débit partagée entre toutes les instances serveur
+// ---------------------------------------------------------------------------
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: text("key").primaryKey(),
+    count: integer("count").notNull().default(1),
+    resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("rate_limits_reset_idx").on(t.resetAt)]
+);
+
+// ---------------------------------------------------------------------------
 // Utilisateurs & auth
 // ---------------------------------------------------------------------------
 export const users = pgTable("users", {

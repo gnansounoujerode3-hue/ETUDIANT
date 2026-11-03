@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { subscriptions, users } from "@/db/schema";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import {
   createSession,
   createAuthTicket,
@@ -43,6 +44,19 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     // Emplacement pour l'implémentation OAuth Google (Supabase Auth / Auth.js).
     return NextResponse.json({ error: "google_not_configured" }, { status: 501 });
+  }
+
+  if (action === "login" || action === "register") {
+    const rule = action === "login"
+      ? { name: "auth-login", limit: 10, windowSeconds: 15 * 60 }
+      : { name: "auth-register", limit: 5, windowSeconds: 60 * 60 };
+    const rate = await enforceRateLimit(req, rule);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited" },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+      );
+    }
   }
 
   let body: {

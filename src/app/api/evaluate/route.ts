@@ -11,6 +11,7 @@ import {
 import { getCurrentUser } from "@/lib/auth";
 import { evaluateAnswer } from "@/lib/ai";
 import { sm2Update } from "@/lib/sm2";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -20,6 +21,18 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const rate = await enforceRateLimit(
+    req,
+    { name: "evaluate", limit: user.plan === "premium" ? 500 : 60, windowSeconds: 60 * 60 },
+    user.id
+  );
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+    );
+  }
 
   let body: {
     oralSessionId?: string;

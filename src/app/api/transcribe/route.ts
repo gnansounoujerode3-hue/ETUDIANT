@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -9,6 +10,18 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const rate = await enforceRateLimit(
+    req,
+    { name: "transcribe", limit: user.plan === "premium" ? 120 : 20, windowSeconds: 60 * 60 },
+    user.id
+  );
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }
+    );
+  }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {

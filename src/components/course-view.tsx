@@ -13,6 +13,7 @@ import {
   PenLine,
 } from "lucide-react";
 import { AppHeader } from "./app-header";
+import { CourseManagement } from "./course-management";
 import { Badge, Card, Progress } from "./ui";
 import { useI18n } from "@/lib/i18n";
 
@@ -61,6 +62,9 @@ export function CourseView({
               <FileText className="size-4" /> {course.sourceName}
             </p>
           )}
+          <div className="mt-2">
+            <CourseManagement courseId={course.id} title={course.title} />
+          </div>
         </div>
 
         {mastery != null && (
