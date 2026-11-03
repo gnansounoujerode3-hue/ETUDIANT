@@ -33,11 +33,27 @@ export const users = pgTable("users", {
   name: text("name"),
   passwordHash: text("password_hash"),
   imageUrl: text("image_url"),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   locale: text("locale").notNull().default("fr"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
+
+export const accountTokens = pgTable(
+  "account_tokens",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // verify_email | reset_password
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("account_tokens_user_idx").on(t.userId), index("account_tokens_expiry_idx").on(t.expiresAt)]
+);
 
 export const authSessions = pgTable(
   "auth_sessions",

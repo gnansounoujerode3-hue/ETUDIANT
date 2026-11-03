@@ -247,6 +247,11 @@ export function AuthForm({
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 />
               </div>
+              {mode === "login" && (
+                <Link href="/forgot-password" className="block text-right text-xs text-violet-300 hover:text-cyan">
+                  {lang === "fr" ? "Mot de passe oublié ?" : "Forgot password?"}
+                </Link>
+              )}
             </div>
 
             {(error || info) && (

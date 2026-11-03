@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { subscriptions, users } from "@/db/schema";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { issueAccountToken, sendAccountEmail } from "@/lib/account-email";
 import {
   createSession,
   createAuthTicket,
@@ -93,6 +94,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       })
       .returning({ id: users.id });
     await db.insert(subscriptions).values({ userId: user.id, plan: "free" });
+    const verificationToken = await issueAccountToken(user.id, "verify_email", 24 * 60);
+    await sendAccountEmail({
+      to: email,
+      name: (body.name ?? "").trim() || null,
+      kind: "verify_email",
+      token: verificationToken,
+      locale: body.locale === "en" ? "en" : "fr",
+    }).catch(() => undefined);
     return completeAuthentication(user.id, body.embedded === true);
   }
 
