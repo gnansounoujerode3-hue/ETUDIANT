@@ -99,7 +99,16 @@ npm run dev
 ```
 
 Sans `ANTHROPIC_API_KEY`, un moteur heuristique local assure une démo complète.
-Sans `STRIPE_SECRET_KEY`, "Passer Premium" active le plan en mode démo (aucun débit).
+Le mode Premium de démonstration doit être activé explicitement avec `ALLOW_DEMO_PREMIUM=true` et reste interdit en production.
+
+### Emails en bêta sans domaine
+
+Voxa accepte deux modes temporaires :
+
+1. sans fournisseur email, l'inscription reste disponible mais la vérification et la récupération par email ne peuvent pas aboutir ;
+2. avec Brevo, configurez `BREVO_API_KEY` et une adresse `EMAIL_FROM` vérifiée dans Brevo. Cela permet d'envoyer aux vrais utilisateurs avant l'achat d'un domaine.
+
+Resend reste pris en charge avec `RESEND_API_KEY` et devient prioritaire si les deux fournisseurs sont configurés. Pour une commercialisation durable, remplacez l'adresse personnelle par un domaine d'envoi authentifié.
 
 ## Déploiement sur Vercel
 
