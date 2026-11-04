@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { chapters, courses, flashcards, questions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { structureCourse } from "@/lib/ai";
+import { detectCourseLanguage } from "@/lib/language";
 import { canCreateCourse } from "@/lib/limits";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
@@ -57,7 +58,9 @@ export async function POST(req: NextRequest) {
   }
 
   const rawText = text.slice(0, MAX_RAW_CHARS);
-  const lang = user.locale === "en" ? "en" : "fr";
+  // La langue des questions suit le document importé. La langue du profil ne
+  // sert que de solution de repli pour un texte trop court ou ambigu.
+  const lang = detectCourseLanguage(rawText, user.locale === "en" ? "en" : "fr");
   const structured = await structureCourse(
     rawText,
     body.sourceName || body.title || "cours",

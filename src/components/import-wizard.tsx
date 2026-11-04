@@ -39,6 +39,7 @@ export function ImportWizard() {
       if (e.code === "unsupported_format") return d.importPage.errors.unsupported;
       if (e.code === "empty_text") return d.importPage.errors.empty;
       if (e.code === "pdf_failed") return d.importPage.errors.pdf;
+      if (e.code === "pdf_no_text") return d.importPage.errors.empty;
     }
     return d.importPage.errors.generic;
   };

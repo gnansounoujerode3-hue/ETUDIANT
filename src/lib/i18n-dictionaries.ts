@@ -199,7 +199,7 @@ export const fr = {
     errors: {
       unsupported: "Format non pris en charge. Utilise PDF, DOCX, PPTX ou TXT.",
       empty: "Impossible de lire du texte dans ce fichier.",
-      pdf: "Ce PDF semble protégé ou scanné (image). Essaie un autre fichier.",
+      pdf: "Impossible de lire ce PDF. Vérifie que le fichier est valide, puis réessaie.",
       generic: "Échec de la création du cours. Réessaie.",
       limit: "Offre gratuite : 1 seul cours. Passe Premium pour en ajouter.",
     },
@@ -528,7 +528,7 @@ export const en: Dict = {
     errors: {
       unsupported: "Unsupported format. Use PDF, DOCX, PPTX or TXT.",
       empty: "No readable text found in this file.",
-      pdf: "This PDF seems protected or scanned (image). Try another file.",
+      pdf: "Unable to read this PDF. Check that the file is valid, then try again.",
       generic: "Failed to create the course. Try again.",
       limit: "Free plan: only 1 course. Go Premium to add more.",
     },

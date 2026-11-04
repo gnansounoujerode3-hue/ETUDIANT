@@ -2,7 +2,7 @@
 // Aucune dépendance serveur : tout s'exécute dans le navigateur.
 
 export class ExtractError extends Error {
-  code: "unsupported_format" | "pdf_failed" | "empty_text" | "too_large";
+  code: "unsupported_format" | "pdf_failed" | "pdf_no_text" | "empty_text" | "too_large";
   constructor(code: ExtractError["code"]) {
     super(code);
     this.code = code;
@@ -33,25 +33,57 @@ export async function extractTextFromFile(file: File): Promise<string> {
 
 async function extractPdf(file: File): Promise<string> {
   try {
-     
     const pdfjs: any = await import("pdfjs-dist");
-    pdfjs.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    const data = await file.arrayBuffer();
-    const doc = await pdfjs.getDocument({ data }).promise;
-    let out = "";
+    // Le worker doit avoir exactement la même version que pdfjs. L'ancienne
+    // URL CDN pointait vers PDF.js 3 alors que l'application utilise PDF.js 6,
+    // ce qui faisait échouer des PDF parfaitement valides.
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/build/pdf.worker.min.mjs",
+      import.meta.url
+    ).toString();
+
+    const data = new Uint8Array(await file.arrayBuffer());
+    const loadingTask = pdfjs.getDocument({
+      data,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+    const doc = await loadingTask.promise;
+    const pages: string[] = [];
+    let totalLength = 0;
+
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      out +=
-        content.items
-           
-          .map((item: any) => ("str" in item ? item.str : ""))
-          .join(" ") + "\n\n";
-      if (out.length > MAX_CHARS) break;
+      const content = await page.getTextContent({ includeMarkedContent: false });
+      let pageText = "";
+      let previousY: number | null = null;
+
+      for (const item of content.items as Array<{ str?: string; hasEOL?: boolean; transform?: number[] }>) {
+        if (typeof item.str !== "string" || !item.str) continue;
+        const y = Array.isArray(item.transform) ? item.transform[5] : null;
+        const newLine = item.hasEOL || (previousY != null && y != null && Math.abs(y - previousY) > 4);
+        if (pageText && newLine) pageText += "\n";
+        else if (pageText && !pageText.endsWith(" ") && !pageText.endsWith("\n")) pageText += " ";
+        pageText += item.str;
+        if (y != null) previousY = y;
+      }
+
+      pageText = pageText.replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+      if (pageText) {
+        pages.push(pageText);
+        totalLength += pageText.length;
+      }
+      page.cleanup();
+      if (totalLength > MAX_CHARS) break;
     }
-    return out;
-  } catch {
+    await doc.destroy();
+
+    const extracted = pages.join("\n\n").trim();
+    if (extracted.length < 20) throw new ExtractError("pdf_no_text");
+    return extracted;
+  } catch (error) {
+    if (error instanceof ExtractError) throw error;
     throw new ExtractError("pdf_failed");
   }
 }
