@@ -1,10 +1,12 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-const databaseUrl = process.env.DATABASE_URL;
+// Vercel's Supabase integration exposes POSTGRES_URL automatically.
+// DATABASE_URL remains supported for local development and other hosts.
+const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
+  throw new Error("POSTGRES_URL or DATABASE_URL is required");
 }
 
 const globalForDb = globalThis as typeof globalThis & {
