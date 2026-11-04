@@ -80,7 +80,25 @@ async function extractPdf(file: File): Promise<string> {
     if (extracted.length < 20) throw new ExtractError("pdf_no_text");
     return extracted;
   } catch (error) {
-    if (error instanceof ExtractError) throw error;
+    if (error instanceof ExtractError && error.code === "pdf_no_text") throw error;
+
+    // Solution de repli indépendante du navigateur. Certains navigateurs ou
+    // extensions bloquent les Web Workers malgré un asset PDF.js valide.
+    // Pour les PDF courants, le serveur extrait alors le texte directement.
+    if (file.size <= 4 * 1024 * 1024) {
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const response = await fetch("/api/extract/pdf", { method: "POST", body: form });
+        const result = (await response.json().catch(() => ({}))) as { text?: string; error?: string };
+        if (response.ok && typeof result.text === "string" && result.text.length >= 20) {
+          return result.text;
+        }
+        if (result.error === "no_text") throw new ExtractError("pdf_no_text");
+      } catch (fallbackError) {
+        if (fallbackError instanceof ExtractError) throw fallbackError;
+      }
+    }
     throw new ExtractError("pdf_failed");
   }
 }
