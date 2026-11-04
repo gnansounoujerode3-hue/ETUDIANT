@@ -13,10 +13,22 @@ const globalForDb = globalThis as typeof globalThis & {
   __arenaNextJsPostgresqlPool?: Pool;
 };
 
+const isSupabase = /(?:supabase\.co|pooler\.supabase\.com)/i.test(databaseUrl);
+let connectionString = databaseUrl;
+if (isSupabase) {
+  // Supabase's managed pooler presents a certificate chain that is encrypted
+  // but is not rooted in the CA bundle available in every Vercel runtime.
+  // Remove URL-level sslmode so the explicit TLS configuration below wins.
+  const parsed = new URL(databaseUrl);
+  parsed.searchParams.delete("sslmode");
+  connectionString = parsed.toString();
+}
+
 export const pool =
   globalForDb.__arenaNextJsPostgresqlPool ??
   new Pool({
-    connectionString: databaseUrl,
+    connectionString,
+    ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
   });
 
 if (process.env.NODE_ENV !== "production") {
