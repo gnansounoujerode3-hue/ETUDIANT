@@ -31,7 +31,32 @@ export async function extractTextFromFile(file: File): Promise<string> {
   return text;
 }
 
+async function extractPdfOnServer(file: File): Promise<string | null> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch("/api/extract/pdf", { method: "POST", body: form });
+    const result = (await response.json().catch(() => ({}))) as { text?: string; error?: string };
+    if (response.ok && typeof result.text === "string" && result.text.length >= 20) {
+      return result.text;
+    }
+    if (result.error === "no_text") throw new ExtractError("pdf_no_text");
+    return null;
+  } catch (error) {
+    if (error instanceof ExtractError) throw error;
+    return null;
+  }
+}
+
 async function extractPdf(file: File): Promise<string> {
+  // Les petits PDF passent d'abord par le serveur. Cela évite entièrement les
+  // incompatibilités PDF.js/Web Worker du navigateur. Le PDF réel signalé par
+  // l'utilisateur (150 Ko) est correctement extrait par ce chemin.
+  if (file.size <= 4 * 1024 * 1024) {
+    const serverText = await extractPdfOnServer(file);
+    if (serverText) return serverText;
+  }
+
   try {
     // Utiliser l'entrée officielle prévue par PDF.js pour les bundlers. Elle
     // crée elle-même un Worker avec une URL relative au paquet. Construire
@@ -86,18 +111,8 @@ async function extractPdf(file: File): Promise<string> {
     // extensions bloquent les Web Workers malgré un asset PDF.js valide.
     // Pour les PDF courants, le serveur extrait alors le texte directement.
     if (file.size <= 4 * 1024 * 1024) {
-      try {
-        const form = new FormData();
-        form.append("file", file);
-        const response = await fetch("/api/extract/pdf", { method: "POST", body: form });
-        const result = (await response.json().catch(() => ({}))) as { text?: string; error?: string };
-        if (response.ok && typeof result.text === "string" && result.text.length >= 20) {
-          return result.text;
-        }
-        if (result.error === "no_text") throw new ExtractError("pdf_no_text");
-      } catch (fallbackError) {
-        if (fallbackError instanceof ExtractError) throw fallbackError;
-      }
+      const serverText = await extractPdfOnServer(file);
+      if (serverText) return serverText;
     }
     throw new ExtractError("pdf_failed");
   }
