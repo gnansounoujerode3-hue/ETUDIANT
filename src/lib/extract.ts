@@ -33,20 +33,11 @@ export async function extractTextFromFile(file: File): Promise<string> {
 
 async function extractPdf(file: File): Promise<string> {
   try {
-    const pdfjs: any = await import("pdfjs-dist");
-    // Le worker doit avoir exactement la même version que pdfjs. L'ancienne
-    // URL CDN pointait vers PDF.js 3 alors que l'application utilise PDF.js 6,
-    // ce qui faisait échouer des PDF parfaitement valides.
-    // Créer explicitement le Worker est plus fiable avec Next/Webpack que de
-    // fournir seulement workerSrc : dans certains builds de production,
-    // PDF.js tentait sinon de charger littéralement `pdfjs-dist/...` depuis
-    // le domaine du site et tous les documents échouaient avant leur lecture.
-    if (!pdfjs.GlobalWorkerOptions.workerPort) {
-      pdfjs.GlobalWorkerOptions.workerPort = new Worker(
-        new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url),
-        { type: "module" }
-      );
-    }
+    // Utiliser l'entrée officielle prévue par PDF.js pour les bundlers. Elle
+    // crée elle-même un Worker avec une URL relative au paquet. Construire
+    // cette URL depuis ce fichier applicatif produisait un asset, mais son URL
+    // d'exécution était incorrecte dans certains navigateurs en production.
+    const pdfjs: any = await import("pdfjs-dist/webpack.mjs");
 
     const data = new Uint8Array(await file.arrayBuffer());
     const loadingTask = pdfjs.getDocument({
