@@ -3,7 +3,7 @@ import { Pool } from "pg";
 
 // Vercel's Supabase integration exposes POSTGRES_URL automatically.
 // DATABASE_URL remains supported for local development and other hosts.
-const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 if (!databaseUrl) {
   throw new Error("POSTGRES_URL or DATABASE_URL is required");
