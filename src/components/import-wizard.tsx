@@ -92,6 +92,11 @@ export function ImportWizard() {
         setStage("input");
         return;
       }
+      if (res.status === 429) {
+        setError("Trop de tentatives rapprochées. Réessaie dans quelques instants.");
+        setStage(tab === "file" && text ? "review" : "input");
+        return;
+      }
       if (!res.ok) {
         setError(d.importPage.errors.generic);
         setStage(tab === "file" && text ? "review" : "input");

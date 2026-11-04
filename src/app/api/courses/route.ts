@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
 
   const rate = await enforceRateLimit(
     req,
-    { name: "course-create", limit: user.plan === "premium" ? 30 : 3, windowSeconds: 24 * 60 * 60 },
+    // Ce compteur protège l'appel de structuration, mais ne doit pas être
+    // confondu avec la limite de cours du forfait. Les tentatives échouées
+    // (réseau, IA, base) comptent aussi : 3/jour bloquait donc un utilisateur
+    // pendant 24 h après quelques nouveaux essais.
+    { name: "course-create", limit: user.plan === "premium" ? 60 : 20, windowSeconds: 24 * 60 * 60 },
     user.id
   );
   if (!rate.allowed) {
