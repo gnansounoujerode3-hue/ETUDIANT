@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       modelAnswer: questions.modelAnswer,
       keyPoints: questions.keyPoints,
       courseTitle: courses.title,
+      courseRawText: courses.rawText,
     })
     .from(questions)
     .innerJoin(courses, eq(questions.courseId, courses.id))
@@ -92,7 +93,11 @@ export async function POST(req: NextRequest) {
   // La langue du feedback doit suivre le cours, pas la langue enregistrée dans
   // le profil. Sinon un cours français pouvait produire une évaluation anglaise.
   const evaluationLanguage = detectCourseLanguage(
-    `${question.prompt}\n${question.modelAnswer}\n${question.keyPoints.join(" ")}`,
+    // Le texte source complet est nécessaire : certaines questions très
+    // courtes (« Donne un exemple… ») sont ambiguës isolément et retombaient
+    // encore sur la langue anglaise du profil.
+    question.courseRawText ||
+      `${question.prompt}\n${question.modelAnswer}\n${question.keyPoints.join(" ")}`,
     user.locale === "en" ? "en" : "fr"
   );
   const evaluation = await evaluateAnswer({
