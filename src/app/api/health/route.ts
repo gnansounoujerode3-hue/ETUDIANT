@@ -13,6 +13,11 @@ export async function GET() {
         ? String((error as { code?: unknown }).code ?? "database_error")
         : "database_error";
     console.error("Database health check failed", error);
-    return Response.json({ ok: false, code }, { status: 500 });
+    const rawMessage = error instanceof Error ? error.message : "Database connection failed";
+    const message = rawMessage
+      .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, "[redacted-database-url]")
+      .replace(/password=[^\s]+/gi, "password=[redacted]")
+      .slice(0, 240);
+    return Response.json({ ok: false, code, message }, { status: 500 });
   }
 }
