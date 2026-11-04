@@ -10,6 +10,12 @@ describe("detectCourseLanguage", () => {
     expect(detectCourseLanguage(text, "en")).toBe("fr");
   });
 
+  it("détecte un texte d'évaluation français même si le profil est anglais", () => {
+    const text = `Définis « statiques » avec tes propres mots, comme si tu l'expliquais à un ami.
+      Déclinaisons et variantes. Donne un exemple concret tiré du cours.`;
+    expect(detectCourseLanguage(text, "en")).toBe("fr");
+  });
+
   it("détecte un cours rédigé en anglais même si le profil est français", () => {
     const text = `Photosynthesis is the process by which plants use light energy.
       In plant cells, chlorophyll helps transform this energy into chemical energy.

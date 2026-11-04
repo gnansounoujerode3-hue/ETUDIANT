@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { evaluateAnswer } from "@/lib/ai";
+import { detectCourseLanguage } from "@/lib/language";
 import { sm2Update } from "@/lib/sm2";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
@@ -88,13 +89,19 @@ export async function POST(req: NextRequest) {
   const question = questionRows[0];
   if (!question) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
+  // La langue du feedback doit suivre le cours, pas la langue enregistrée dans
+  // le profil. Sinon un cours français pouvait produire une évaluation anglaise.
+  const evaluationLanguage = detectCourseLanguage(
+    `${question.prompt}\n${question.modelAnswer}\n${question.keyPoints.join(" ")}`,
+    user.locale === "en" ? "en" : "fr"
+  );
   const evaluation = await evaluateAnswer({
     question: question.prompt,
     modelAnswer: question.modelAnswer,
     keyPoints: question.keyPoints,
     transcript,
     courseTitle: question.courseTitle,
-    lang: user.locale === "en" ? "en" : "fr",
+    lang: evaluationLanguage,
   });
 
   // --- SM-2 ---
