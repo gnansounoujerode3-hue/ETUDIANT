@@ -21,32 +21,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "too_large" }, { status: 413 });
     }
 
-    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const loadingTask = pdfjs.getDocument({
-      data: new Uint8Array(await file.arrayBuffer()),
-    });
-    const doc = await loadingTask.promise;
-    const pages: string[] = [];
-    let length = 0;
-
-    for (let pageNumber = 1; pageNumber <= doc.numPages && length < MAX_CHARS; pageNumber++) {
-      const page = await doc.getPage(pageNumber);
-      const content = await page.getTextContent();
-      const text = content.items
-        .map((item) => ("str" in item ? item.str : ""))
-        .filter(Boolean)
-        .join(" ")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (text) {
-        pages.push(text);
-        length += text.length;
-      }
-      page.cleanup();
-    }
-    await loadingTask.destroy();
-
-    const text = pages.join("\n\n").slice(0, MAX_CHARS).trim();
+    // pdf-parse est volontairement utilisé ici plutôt que le build navigateur
+    // de PDF.js. Il fonctionne sans Web Worker ni API DOM dans la fonction
+    // Node de Vercel et a été validé avec le PDF exact signalé par l'utilisateur.
+    const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
+    const parsed = await pdfParse(Buffer.from(await file.arrayBuffer()));
+    const text = parsed.text.slice(0, MAX_CHARS).trim();
     if (text.length < 20) {
       return NextResponse.json({ error: "no_text" }, { status: 422 });
     }
